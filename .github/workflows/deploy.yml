@@ -1,0 +1,48 @@
+name: Deploy LinkForge
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to VPS
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          printf '%s\n' "$VPS_SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+
+          ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
+
+          ssh -i ~/.ssh/id_ed25519 \
+            -o IdentitiesOnly=yes \
+            "$VPS_USER@$VPS_HOST" << 'EOF'
+              set -e
+
+              cd /opt/linkforge
+
+              echo "Pulling latest code..."
+              git fetch origin main
+              git reset --hard origin/main
+
+              echo "Building and starting containers..."
+              docker compose up -d --build
+
+              echo "Checking containers..."
+              docker compose ps
+
+              echo "Checking application..."
+              curl -fsS https://elinkforge.aarnova.ai/ > /dev/null
+
+              echo "Deployment successful!"
+          EOF
