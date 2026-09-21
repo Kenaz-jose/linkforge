@@ -1,0 +1,83 @@
+services:
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    container_name: linkforge-postgres
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: linkforge
+      POSTGRES_USER: linkforge
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+
+    volumes:
+      - linkforge_postgres_data:/var/lib/postgresql/data
+      - ./docker/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U linkforge -d linkforge"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+    networks:
+      - linkforge
+
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    container_name: linkforge-backend
+    restart: unless-stopped
+
+    env_file:
+      - .env
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    volumes:
+      - linkforge_chroma_data:/app/data/chroma_db
+
+    networks:
+      - linkforge
+
+    expose:
+      - "8000"
+
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+
+    container_name: linkforge-frontend
+    restart: unless-stopped
+
+    depends_on:
+      - backend
+
+    networks:
+      - linkforge
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=linkforge_linkforge"
+      - "traefik.http.routers.linkforge.rule=Host(`elinkforge.aarnova.ai`)"
+      - "traefik.http.routers.linkforge.entrypoints=websecure"
+      - "traefik.http.routers.linkforge.tls=true"
+      - "traefik.http.routers.linkforge.tls.certresolver=letsencrypt"
+      - "traefik.http.services.linkforge.loadbalancer.server.port=80"
+
+
+networks:
+  linkforge:
+    driver: bridge
+
+
+volumes:
+  linkforge_postgres_data:
+  linkforge_chroma_data:
