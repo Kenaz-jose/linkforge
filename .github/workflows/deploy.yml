@@ -15,7 +15,12 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
           VPS_USER: ${{ secrets.VPS_USER }}
           VPS_SSH_KEY_B64: ${{ secrets.VPS_SSH_KEY_B64 }}
+
         run: |
+          set -e
+
+          echo "Setting up SSH..."
+
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
@@ -24,11 +29,15 @@ jobs:
 
           ssh-keyscan -H "$VPS_HOST" >> ~/.ssh/known_hosts
 
+          echo "Connecting to VPS..."
+
           ssh -i ~/.ssh/id_ed25519 \
             -o IdentitiesOnly=yes \
             "$VPS_USER@$VPS_HOST" << 'EOF'
+
               set -e
 
+              echo "Entering LinkForge directory..."
               cd /opt/linkforge
 
               echo "Pulling latest code..."
@@ -42,7 +51,20 @@ jobs:
               docker compose ps
 
               echo "Checking application..."
+
+              for i in {1..12}; do
+                if curl -fsS https://elinkforge.aarnova.ai/ > /dev/null; then
+                  echo "Application is healthy!"
+                  break
+                fi
+
+                echo "Application not ready yet. Retrying in 5 seconds..."
+                sleep 5
+              done
+
+              echo "Running final health check..."
               curl -fsS https://elinkforge.aarnova.ai/ > /dev/null
 
               echo "Deployment successful!"
+
           EOF
