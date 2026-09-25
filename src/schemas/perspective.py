@@ -22,6 +22,111 @@ the Perspective Layer and the user.
  LinkedIn post.
 """
 
+class POVSection(BaseModel):
+    """
+    Raw user input for one dimension of their perspective.
+
+    selected:
+        Options explicitly selected by the user from the UI.
+
+    custom:
+        Optional free-form text when the predefined options do not
+        fully represent what the user wants to say.
+    """
+
+    selected: list[str] = Field(default_factory=list)
+    custom: str = ""
+
+
+class POVCapture(BaseModel):
+    """
+    Raw perspective information captured directly from the user.
+
+    This is intentionally different from PerspectiveBrief.
+
+    POVCapture = what the user explicitly selected/wrote.
+
+    PerspectiveBrief = the structured interpretation used by
+    downstream content-generation agents.
+    """
+
+    opinion: POVSection = Field(default_factory=POVSection)
+    experience: POVSection = Field(default_factory=POVSection)
+    message: POVSection = Field(default_factory=POVSection)
+    audience: POVSection = Field(default_factory=POVSection)
+    
+class POVOptionSet(BaseModel):
+    """
+    LLM-generated checkbox options used to help the user
+    identify their own perspective.
+
+    These are suggestions for the UI, NOT claims about what
+    the user believes.
+
+    The user must explicitly select an option before it becomes
+    part of POVCapture.
+    """
+
+    opinion: list[str] = Field(
+        default_factory=list,
+        description="Candidate statements that help the user identify their opinion."
+    )
+
+    experience: list[str] = Field(
+        default_factory=list,
+        description="Candidate statements describing possible relevant experiences."
+    )
+
+    message: list[str] = Field(
+        default_factory=list,
+        description="Candidate statements describing possible reader takeaways."
+    )
+
+    audience: list[str] = Field(
+        default_factory=list,
+        description="Candidate descriptions of people who may care about the topic."
+    )
+
+class POVGapAnalysis(BaseModel):
+    """
+    Result of analyzing whether the captured POV contains enough
+    information to create a genuinely personal LinkedIn post.
+
+    This model does NOT generate or modify the user's perspective.
+
+    The LLM only identifies an important missing piece and, if
+    necessary, proposes one targeted follow-up question.
+    """
+
+    has_gap: bool = Field(
+        description="Whether an important piece of perspective is missing."
+    )
+
+    missing_area: str | None = Field(
+        default=None,
+        description=(
+            "The POV area that is missing or insufficient. "
+            "Expected values: opinion, experience, message, audience."
+        ),
+    )
+
+    reason: str | None = Field(
+        default=None,
+        description=(
+            "Short explanation of why the missing information matters "
+            "for creating a personal post."
+        ),
+    )
+
+    question: str | None = Field(
+        default=None,
+        description=(
+            "One targeted follow-up question that can fill the gap. "
+            "Must be null when has_gap is false."
+        ),
+    )
+
+    
 class InterviewQuestion(BaseModel):
     """
     Represents one question asked during a perspective interview.

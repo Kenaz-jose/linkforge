@@ -1,9 +1,11 @@
 import logging
 from src.agents.brief import BriefAgent
 from src.agents.interview import InterviewerAgent
-from src.schemas.perspective import Answer, PerspectiveBrief, QuestionSet
+from src.agents.pov_options import generate_pov_options
+from src.schemas.perspective import Answer, PerspectiveBrief, QuestionSet, InterviewQuestion, POVCapture, POVOptionSet, POVGapAnalysis
 from src.store.memory_store import get_memory, save_memory
 from src.agents.quality import AnswerQualityAgent
+from src.agents.pov_gap import analyze_pov_gap
 
 logger = logging.getLogger(__name__)
 
@@ -96,7 +98,45 @@ def start_interview(user_id: str, topic: str,tone: str, n: int = 4) -> QuestionS
         n=n,
     )
 
+MAX_INTERVIEW_QUESTIONS = 5
 
+
+def interview_turn(
+    user_id: str,
+    topic: str,
+    answers: list[Answer],
+    tone: str,
+) -> QuestionSet:
+    """
+    Generates the next adaptive interview question.
+
+    The interviewer can decide to finish early when the user's
+    perspective is already sufficiently clear.
+
+    A hard maximum is also enforced so the interview can never
+    become an unnecessarily long questionnaire.
+
+    No memory is written here. Memory is only updated after the
+    interview is successfully converted into a PerspectiveBrief.
+    """
+
+    # Hard stop: never ask more than MAX_INTERVIEW_QUESTIONS.
+    if len(answers) >= MAX_INTERVIEW_QUESTIONS:
+        logger.info(
+            "Interview reached maximum question limit (%d). Finishing.",
+            MAX_INTERVIEW_QUESTIONS,
+        )
+        return QuestionSet()
+
+    memory = get_memory(user_id, topic)
+
+    return _interviewer.next_question(
+        topic=topic,
+        answers=answers,
+        tone=tone,
+        memory_block=memory.to_prompt_block(topic),
+    )
+    
 def finish_interview(user_id: str,topic: str,answers: list[Answer],tone: str) -> PerspectiveBrief:
     """
     Step 2. Called when the user submits their answers.
@@ -117,3 +157,78 @@ def finish_interview(user_id: str,topic: str,answers: list[Answer],tone: str) ->
     save_memory(memory.absorb(brief))
 
     return brief
+
+def build_brief_from_pov(
+    user_id: str,
+    topic: str,
+    pov: POVCapture,
+    tone: str,
+) -> PerspectiveBrief:
+    """
+    Converts the author's structured POV capture into a PerspectiveBrief.
+
+    POVCapture contains raw information explicitly provided by the user.
+    BriefAgent organizes that information into the structured brief used
+    by the existing downstream generation pipeline.
+
+    Memory is read for context but is only updated after the brief
+    successfully validates.
+    """
+    memory = get_memory(user_id, topic)
+
+    brief = _brief_agent.invoke(
+        topic=topic,
+        pov=pov,
+        memory_block=memory.to_prompt_block(topic),
+        tone=tone,
+    )
+
+    save_memory(memory.absorb(brief))
+
+    return brief
+
+def generate_pov_options_for_topic(
+    user_id: str,
+    topic: str,
+) -> POVOptionSet:
+    """
+    Generate selectable POV options for a topic using relevant
+    user memory.
+
+    The memory is used to make the generated options more personal
+    and especially to ground experience options in things the user
+    has actually mentioned before.
+
+    The returned options are only suggestions for the user.
+    They do not become part of the user's POV until explicitly selected.
+    """
+
+    memory = get_memory(user_id, topic)
+
+    return generate_pov_options(
+        topic=topic,
+        memory_block=memory.to_prompt_block(topic),
+    )
+
+def analyze_pov_gap_for_topic(
+    user_id: str,
+    topic: str,
+    pov: POVCapture,
+) -> POVGapAnalysis:
+    """
+    Analyze whether the user's captured POV has an important gap.
+
+    The service layer is responsible for retrieving relevant user
+    memory and passing it to the gap-detection agent.
+
+    The agent only identifies a missing piece and does not modify
+    the user's POV.
+    """
+
+    memory = get_memory(user_id, topic)
+
+    return analyze_pov_gap(
+        topic=topic,
+        pov=pov,
+        memory_block=memory.to_prompt_block(topic),
+    )

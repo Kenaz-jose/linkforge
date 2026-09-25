@@ -1,5 +1,12 @@
 from pydantic import BaseModel
 from typing import Dict, Any, Optional, List
+from src.schemas.perspective import (
+    Answer,
+    PerspectiveBrief,
+    InterviewQuestion,
+    POVCapture,
+    POVGapAnalysis
+)
 
 class OptimizeRequest(BaseModel):
     thread_id: str
@@ -23,8 +30,9 @@ class OptimizeResponse(BaseModel):
     proposed_references: Optional[List[Dict[str, Any]]] = None
     reasoning_steps: List[str] = []
 
-from src.schemas.perspective import Answer, PerspectiveBrief
-
+class TopicRequest(BaseModel):
+    topic: str
+    
 class StartInterviewRequest(BaseModel):
     topic: str
     tone: str
@@ -43,6 +51,28 @@ class FinishInterviewRequest(BaseModel):
 class FinishInterviewResponse(BaseModel):
     brief_id: str
     brief: PerspectiveBrief
+
+class InterviewTurnRequest(BaseModel):
+    topic: str
+    tone: str
+    answers: List[Answer]
+
+class InterviewTurnResponse(BaseModel):
+    complete: bool
+    question: Optional[InterviewQuestion] = None
+
+class POVCaptureRequest(BaseModel):
+    topic: str
+    tone: str
+    pov: POVCapture
+
+class POVGapRequest(BaseModel):
+    topic: str
+    pov: POVCapture
+
+
+class POVGapResponse(BaseModel):
+    gap: POVGapAnalysis
 
 class LiveContextRequest(BaseModel):
     topic: str

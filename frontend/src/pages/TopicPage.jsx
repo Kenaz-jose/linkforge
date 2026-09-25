@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useWorkflow } from '../context/WorkflowContext';
-import { getCuratedTopics, startInterview } from '../services/api';
+import { getCuratedTopics } from '../services/api';
 
 const CATEGORIES = [
   "AI & Deep Learning", 
@@ -19,7 +19,7 @@ const TONES = [
 ];
 
 export const TopicPage = () => {
-  const { setTopic, tone, setTone, setQuestions, setPhase } = useWorkflow();
+  const { setTopic, tone, setTone, setPhase } = useWorkflow();
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [curatedArticles, setCuratedArticles] = useState([]);
   const [isLoadingCurated, setIsLoadingCurated] = useState(false);
@@ -42,24 +42,17 @@ export const TopicPage = () => {
     }
   };
 
-  const handleStartInterview = async (selectedTopic) => {
+  const handleStartInterview = (selectedTopic) => {
     if (!selectedTopic.trim()) {
       setStartError("Please enter a topic or select a news article above.");
       return;
     }
-    
-    setIsStarting(true);
+
     setStartError(null);
+    setIsStarting(true);
+
     setTopic(selectedTopic.trim());
-    
-    try {
-      const data = await startInterview(selectedTopic.trim(), tone);
-      setQuestions(data.questions || []);
-      setPhase('interview');
-    } catch (err) {
-      setStartError("Could not start interview. Please try again.");
-      setIsStarting(false);
-    }
+    setPhase('interview');
   };
 
   return (

@@ -52,15 +52,29 @@ def get_state(thread_id: str):
 from src.agents.curator import get_curated_topics
 from src.schemas.curator import CuratedOptions
 from src.schemas.perspective import QuestionSet
-from src.services.perspective_service import start_interview, probe_interview, finish_interview
+from src.services.perspective_service import (
+    start_interview, 
+    probe_interview,
+    interview_turn, 
+    finish_interview, 
+    build_brief_from_pov, 
+    generate_pov_options_for_topic, 
+    analyze_pov_gap_for_topic
+)
 from src.store.run_store import save_brief
 from src.services.search_service import fetch_live_context
 from src.api.schema import (
-    StartInterviewRequest, 
-    ProbeInterviewRequest, 
-    FinishInterviewRequest, 
-    FinishInterviewResponse, 
-    LiveContextRequest
+    StartInterviewRequest,
+    ProbeInterviewRequest,
+    InterviewTurnRequest,
+    InterviewTurnResponse,
+    FinishInterviewRequest,
+    FinishInterviewResponse,
+    LiveContextRequest,
+    POVCaptureRequest,
+    POVGapRequest,
+    POVGapResponse,
+    TopicRequest,
 )
 from typing import List, Dict, Any
 
@@ -82,6 +96,31 @@ def api_start_interview(request: StartInterviewRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.post("/interview/turn", response_model=InterviewTurnResponse)
+def api_interview_turn(request: InterviewTurnRequest):
+    """Generates the next adaptive interview question."""
+    try:
+        question_set = interview_turn(
+            USER_ID,
+            request.topic,
+            request.answers,
+            request.tone,
+        )
+
+        if not question_set.questions:
+            return InterviewTurnResponse(
+                complete=True,
+                question=None,
+            )
+
+        return InterviewTurnResponse(
+            complete=False,
+            question=question_set.questions[0],
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+        
 @router.post("/interview/probe", response_model=QuestionSet)
 def api_probe_interview(request: ProbeInterviewRequest):
     """Checks answers and generates follow-up questions for thin answers."""
@@ -99,6 +138,62 @@ def api_finish_interview(request: FinishInterviewRequest):
         return FinishInterviewResponse(brief_id=str(brief_id), brief=brief)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/pov/brief", response_model=FinishInterviewResponse)
+def api_build_brief_from_pov(request: POVCaptureRequest):
+    """Builds a PerspectiveBrief from the user's structured POV capture."""
+    try:
+        brief = build_brief_from_pov(
+            USER_ID,
+            request.topic,
+            request.pov,
+            request.tone,
+        )
+
+        brief_id = save_brief(
+            USER_ID,
+            brief,
+            [],
+            False,
+        )
+
+        return FinishInterviewResponse(
+            brief_id=str(brief_id),
+            brief=brief,
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/pov/options")
+def api_generate_pov_options(request: TopicRequest):
+    """Generates selectable POV options for a topic using user memory."""
+    try:
+        options = generate_pov_options_for_topic(
+            USER_ID,
+            request.topic,
+        )
+        return options
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/pov/gap", response_model=POVGapResponse)
+def api_analyze_pov_gap(request: POVGapRequest):
+    """Analyzes the captured POV for important missing information."""
+    try:
+        gap = analyze_pov_gap_for_topic(
+            USER_ID,
+            request.topic,
+            request.pov,
+        )
+
+        return POVGapResponse(
+            gap=gap,
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/research/live", response_model=List[Dict[str, str]])
 def api_live_context(request: LiveContextRequest):

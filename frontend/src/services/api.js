@@ -20,6 +20,22 @@ export const startInterview = async (topic, tone) => {
   return response.json();
 };
 
+export const nextInterviewTurn = async (topic, tone, answers) => {
+  const response = await fetch('/api/interview/turn', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ topic, tone, answers }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch next interview turn');
+  }
+
+  return response.json();
+};
+
 export const probeInterview = async (topic, tone, answers) => {
   const response = await fetch('/api/interview/probe', {
     method: 'POST',
@@ -45,6 +61,44 @@ export const finishInterview = async (topic, tone, answers, wasProbed) => {
   if (!response.ok) {
     throw new Error('Failed to finish interview');
   }
+  return response.json();
+};
+
+export const buildBriefFromPOV = async (topic, tone, pov) => {
+  const response = await fetch('/api/pov/brief', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      topic,
+      tone,
+      pov,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to build brief from POV');
+  }
+
+  return response.json();
+};
+
+export const generatePOVOptions = async (topic) => {
+  const response = await fetch('/api/pov/options', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      topic,
+    }),
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to generate POV options');
+  }
+
   return response.json();
 };
 

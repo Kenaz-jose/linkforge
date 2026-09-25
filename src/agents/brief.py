@@ -7,7 +7,7 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_groq import ChatGroq
 
 from src.prompts.brief import BRIEF_PROMPT
-from src.schemas.perspective import Answer, PerspectiveBrief
+from src.schemas.perspective import Answer, PerspectiveBrief, POVCapture
 from src.utils.json_output import extract_json
 from src.config.settings import NVIDIA_MODEL, NVIDIA_API_KEY
 
@@ -78,13 +78,49 @@ class BriefAgent:
             blocks.append(f"Q: {a.question_text or a.question_id}\nA: {text}")
 
         return "\n\n".join(blocks)
+    
+    @staticmethod
+    def format_pov(pov: POVCapture) -> str:
+        """
+        Renders the author's raw POV capture for the brief prompt.
+
+        This preserves both:
+        - explicitly selected UI options
+        - optional custom text
+
+        The LLM receives the author's raw perspective and is responsible
+        only for structuring it into a PerspectiveBrief.
+        """
+
+        def format_section(name: str, section) -> str:
+            selected = (
+                "\n".join(f"- {item}" for item in section.selected)
+                if section.selected
+                else "(none selected)"
+            )
+
+            custom = section.custom.strip() or "(none provided)"
+
+            return (
+                f"{name}\n"
+                f"Selected:\n{selected}\n"
+                f"Custom:\n{custom}"
+            )
+
+        return "\n\n".join([
+            format_section("MAIN OPINION", pov.opinion),
+            format_section("EXPERIENCE", pov.experience),
+            format_section("MESSAGE / READER TAKEAWAY", pov.message),
+            format_section("TARGET AUDIENCE", pov.audience),
+        ])
 
     def invoke(
-        self,
-        topic: str,
-        answers: list[Answer],
-        memory_block: str = "(First interview with this person — nothing known yet)",
-        tone: str = "Direct, punchy, and technical (like a senior engineer)",
+    self,
+    topic: str,
+    answers: list[Answer] | None = None,
+    pov: POVCapture | None = None,
+    memory_block: str = "(First interview with this person — nothing known yet)",
+    tone: str = "Direct, punchy, and technical (like a senior engineer)",
     ) -> PerspectiveBrief:
         """
         Returns a validated PerspectiveBrief.
@@ -97,7 +133,10 @@ class BriefAgent:
 
         Failing loudly here is the only way the error stays visible.
         """
-        qa_block = self.format_answers(answers)
+        if pov is not None:
+            pov_block = self.format_pov(pov)
+        else:
+            pov_block = self.format_answers(answers or [])
         last_error = None
 
         for attempt in range(3):
@@ -105,7 +144,7 @@ class BriefAgent:
                 raw = self.chain.invoke({
                     "topic": topic,
                     "memory_block": memory_block,
-                    "qa_block": qa_block,
+                    "pov_block": pov_block,
                 })
 
                 brief = PerspectiveBrief.model_validate(extract_json(raw))
