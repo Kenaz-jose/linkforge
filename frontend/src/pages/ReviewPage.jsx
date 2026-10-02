@@ -238,7 +238,7 @@ export const ReviewPage = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
           <div>
             
-            <h2 className="text-hero text-ink mb-1">The Draft.</h2>
+            <h2 className="text-hero text-ink mb-1">The Draft</h2>
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] text-ink-muted uppercase tracking-widest font-medium md:border-l border-border md:pl-6 pb-2">
              <div>Craft <span className="text-ink">{verdict.craft_score || 0}/10</span></div>

@@ -98,28 +98,29 @@ export const TopicPage = () => {
   }, []);
 
   return (
-    <div className="flex flex-col items-center w-full max-w-2xl mx-auto pt-10 md:pt-20">
+    <div className="flex flex-col items-center w-full max-w-2xl mx-auto pt-2 md:pt-8">
       
       {/* HERO */}
       <div className="text-center mb-10 w-full">
         <h2 className="text-[32px] md:text-[40px] font-editorial text-ink tracking-tight mb-3">
-          What are you thinking about?
+          Stand out in the feed
         </h2>
-        <p className="text-[15px] md:text-[17px] text-ink-secondary">
-          Turn an idea into a perspective worth sharing.
+        <p className="text-[15px] md:text-[17px] text-ink/80">
+          Transform raw ideas into authentic, high-value perspectives.
         </p>
       </div>
       
       {/* MAIN COMPOSER */}
-      <div className="w-full bg-surface rounded-card border border-border p-2 focus-within:border-ink/30 focus-within:ring-2 focus-within:ring-ink/10 transition-all shadow-quiet relative group">
+      <div className="w-full bg-surface rounded-card border border-border p-2 focus-within:border-ink/30 focus-within:ring-2 focus-within:ring-ink/10 transition-all shadow-md relative group">
          
          <div className="px-4 pt-4 pb-2">
             <textarea
               ref={textareaRef}
               value={manualTopic}
               onChange={handleTextareaChange}
-              className="w-full min-h-[60px] max-h-[300px] font-sans text-[16px] md:text-[17px] text-ink placeholder:text-ink-muted/70 resize-none focus:outline-none bg-transparent custom-scrollbar leading-relaxed"
-              placeholder="Start with a thought, a tension, or a useful detail..."
+              rows={1}
+              className="w-full min-h-[28px] max-h-[300px] font-sans text-[16px] md:text-[17px] text-ink placeholder:text-ink/60 resize-none focus:outline-none bg-transparent custom-scrollbar leading-relaxed"
+              placeholder="Drop a rough idea, a hard-learned lesson, or an industry observation..."
             />
          </div>
 
@@ -144,7 +145,7 @@ export const TopicPage = () => {
             <button 
               onClick={() => handleStartInterview(manualTopic)}
               disabled={isStarting || !manualTopic.trim()}
-              className="bg-graphite text-surface font-sans font-semibold text-[13px] py-2 px-5 rounded-full hover:shadow-soft transition-all disabled:opacity-50 disabled:hover:transform-none flex items-center justify-center gap-2 flex-shrink-0"
+              className="bg-ink text-surface font-sans font-semibold text-[13px] py-2 px-5 rounded-full hover:shadow-md transition-all disabled:opacity-50 disabled:hover:transform-none flex items-center justify-center gap-2 flex-shrink-0"
             >
               {isStarting ? (
                 <svg className="animate-spin h-4 w-4 text-surface" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -163,7 +164,7 @@ export const TopicPage = () => {
       )}
 
       {/* INSPIRATION */}
-      <div className="w-full mt-12 flex flex-col items-start">
+      <div className="w-full mt-6 flex flex-col items-start">
         <p className="text-[12px] font-semibold text-ink-muted uppercase tracking-wider mb-6 ml-4">Need inspiration?</p>
         
         <div className="w-full overflow-x-auto custom-scrollbar pb-2 px-2 flex md:justify-center">
@@ -175,7 +176,7 @@ export const TopicPage = () => {
                 className={`flex-shrink-0 px-4 py-2 rounded-full border text-[13px] font-medium transition-colors ${
                   selectedCategory === cat 
                     ? 'bg-selected border-selected text-ink' 
-                    : 'bg-surface border-border hover:bg-surface-muted text-ink-secondary'
+                    : 'bg-surface border-ink/20 hover:bg-surface-muted text-ink/80'
                 }`}
               >
                 {cat}

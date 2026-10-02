@@ -42,37 +42,47 @@ export const BriefPage = () => {
   };
 
   const handleWritePost = () => {
-    // Generate the LangGraph thread ID right before starting optimization
     const newThreadId = crypto.randomUUID();
     setThreadId(newThreadId);
     setPhase('review');
   };
 
   return (
-    <div className="max-w-3xl mx-auto py-6 md:py-10 w-full">
-      <div className="mb-12">
-        
-        <h2 className="text-hero text-ink mb-5">Here's what<br/>we're working with.</h2>
+    <div className="max-w-3xl mx-auto pt-2 pb-6 md:pt-4 md:pb-10 w-full">
+      
+      {/* HEADER SECTION */}
+      <div className="mb-8">
+        <h2 className="font-editorial text-[32px] md:text-[42px] leading-tight tracking-tight text-ink mb-5">Your narrative blueprint</h2>
         <div className="border-b border-border pb-4">
-          <p className="text-[13px] text-ink-secondary font-medium tracking-wide uppercase">{topic}</p>
+          <p className="text-[14px] md:text-[15px] text-ink-secondary font-sans leading-relaxed">
+            {topic}
+          </p>
         </div>
       </div>
 
+      {/* MAIN BRIEF CARD */}
       <div className="bg-surface border border-border rounded-card p-6 md:p-10 shadow-quiet mb-12">
-        <div className="mb-10">
-          <p className="text-metadata text-ink-muted mb-3">Thesis</p>
-          <h3 className="font-editorial text-[26px] md:text-[30px] text-ink leading-[1.2]">
-            {brief.thesis || <span className="italic text-ink-secondary">No clear position captured.</span>}
-          </h3>
+        
+        {/* Thesis */}
+        <div className="mb-8">
+          <p className="text-metadata text-ink-muted mb-4">Thesis</p>
+          <div className="border-l-2 border-ink pl-5 py-1">
+            <h3 className="font-editorial text-[26px] md:text-[30px] text-ink leading-[1.2]">
+              {brief.thesis || <span className="italic text-ink-secondary">No clear position captured.</span>}
+            </h3>
+          </div>
         </div>
 
-        <div className="mb-10">
-          <p className="text-metadata text-ink-muted mb-3">Evidence & Experience</p>
+        <hr className="border-border/30 my-8" />
+
+        {/* Evidence & Experience */}
+        <div className="mb-8">
+          <p className="text-metadata text-ink-muted mb-4">Evidence & Experience</p>
           {brief.evidence && brief.evidence.length > 0 ? (
-            <ul className="space-y-3">
+            <ul className="space-y-4">
               {brief.evidence.map((item, i) => (
                  <li key={i} className="flex items-start gap-4 text-[15px] text-ink-secondary leading-relaxed">
-                   <span className="text-ink-muted/50 mt-1.5">•</span>
+                   <span className="text-ink-muted/50 text-[18px] leading-none mt-[2px]">•</span>
                    <span>{item}</span>
                  </li>
               ))}
@@ -82,32 +92,40 @@ export const BriefPage = () => {
           )}
         </div>
 
+        {/* Details & Specifics */}
         {brief.details && brief.details.length > 0 && (
-          <div className="mb-10">
-            <p className="text-metadata text-ink-muted mb-3">Details & Specifics</p>
-            <ul className="space-y-3">
-              {brief.details.map((item, i) => (
-                 <li key={i} className="flex items-start gap-4 text-[15px] text-ink-secondary leading-relaxed">
-                   <span className="text-ink-muted/50 mt-1.5">•</span>
-                   <span>{item}</span>
-                 </li>
-              ))}
-            </ul>
-          </div>
+          <>
+            <hr className="border-border/30 my-8" />
+            <div className="mb-8">
+              <p className="text-metadata text-ink-muted mb-4">Details & Specifics</p>
+              <ul className="space-y-4">
+                {brief.details.map((item, i) => (
+                   <li key={i} className="flex items-start gap-4 text-[15px] text-ink-secondary leading-relaxed">
+                     <span className="text-ink-muted/50 text-[18px] leading-none mt-[2px]">•</span>
+                     <span>{item}</span>
+                   </li>
+                ))}
+              </ul>
+            </div>
+          </>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-border/50">
+        <hr className="border-border/30 my-8" />
+
+        {/* Footer Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           <div>
-            <p className="text-metadata text-ink-muted mb-2">Written for</p>
+            <p className="text-metadata text-ink-muted mb-3">Written for</p>
             <p className="text-[14px] text-ink-secondary">{brief.audience || "Professionals on LinkedIn"}</p>
           </div>
           <div>
-            <p className="text-metadata text-ink-muted mb-2">The Takeaway</p>
+            <p className="text-metadata text-ink-muted mb-3">The Takeaway</p>
             <p className="text-[14px] text-ink-secondary">{brief.takeaway || <span className="italic text-ink-muted">Nothing specific captured</span>}</p>
           </div>
         </div>
       </div>
 
+      {/* WARNINGS & ALERTS */}
       {hasNoEvidence && (
         <div className="bg-error/10 text-error p-6 md:p-8 rounded-card mb-12 border border-error/30 shadow-sm">
           <strong className="block mb-4 text-[15px] font-semibold">This brief has no first-hand experience.</strong>
@@ -130,21 +148,38 @@ export const BriefPage = () => {
         </div>
       )}
 
+      {/* OPTIONAL CONTEXT SECTION */}
       <div className="mb-12">
-        <p className="text-metadata text-ink-muted mb-2">Optional Context</p>
+        <p className="text-metadata text-ink-muted mb-2">Supporting Evidence</p>
         <p className="text-[14px] text-ink-secondary mb-6">A few current sources that may help strengthen the post.</p>
         
         {!rawSearchResults && (
-          <label className="flex items-center gap-4 p-5 rounded-card border cursor-pointer transition-all focus-within:ring-2 focus-within:ring-ink/20 focus-within:outline-none bg-surface border-border hover:bg-surface-muted">
+          <label className="flex items-center justify-between p-5 rounded-card border cursor-pointer transition-all focus-within:ring-2 focus-within:ring-ink/20 focus-within:outline-none bg-surface border-border hover:bg-surface-muted group">
             <input 
               type="checkbox" 
               className="sr-only"
               onChange={(e) => e.target.checked && handleFetchContext()}
               disabled={isFetchingContext}
             />
-            <div className={`w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center transition-colors border-ink-muted`}>
+            <div className="flex items-center gap-4">
+              <svg className="w-5 h-5 text-ink-muted group-hover:text-ink transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span className="text-[14px] font-medium text-ink">Search the web for current data supporting your thesis</span>
             </div>
-            <span className="text-[14px] font-medium text-ink">Search the web for current data supporting your thesis</span>
+            
+            <div className={`w-11 h-6 rounded-full flex items-center px-1 transition-colors border relative ${
+              isFetchingContext 
+                ? 'bg-ink border-ink' 
+                : 'bg-surface-muted border-border group-hover:border-ink/40'
+            }`}>
+              <div className={`w-4 h-4 rounded-full shadow-sm transition-transform duration-300 ${
+                isFetchingContext 
+                  ? 'translate-x-5 bg-surface' 
+                  : 'bg-ink-muted'
+              }`}></div>
+            </div>
           </label>
         )}
 
@@ -202,6 +237,7 @@ export const BriefPage = () => {
         )}
       </div>
 
+      {/* FOOTER ACTIONS */}
       <div className="flex flex-col-reverse sm:flex-row gap-4 border-t border-border pt-8">
         <button
           onClick={() => {
@@ -216,7 +252,7 @@ export const BriefPage = () => {
         <button
           onClick={handleWritePost}
           disabled={hasNoEvidence}
-          className="w-full sm:w-2/3 bg-graphite text-surface font-sans font-semibold text-[14px] py-3.5 px-6 rounded-button hover:-translate-y-[1px] hover:shadow-soft transition-all disabled:opacity-50 disabled:hover:transform-none flex justify-center items-center shadow-quiet"
+          className="w-full sm:w-2/3 bg-ink text-surface font-sans font-semibold text-[14px] py-3.5 px-6 rounded-button hover:-translate-y-[1px] hover:shadow-md transition-all disabled:opacity-50 disabled:hover:transform-none flex justify-center items-center shadow-sm"
         >
           Write the post
         </button>
@@ -224,4 +260,3 @@ export const BriefPage = () => {
     </div>
   );
 };
-
