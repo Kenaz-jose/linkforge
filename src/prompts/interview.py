@@ -260,7 +260,7 @@ TASK
 
 Generate the NEXT TURN of the interview.
 
-Normally, ask exactly ONE question.
+Normally, ask exactly {n} questions.
 
 If the user's existing answers already contain enough specific, personal
 material to understand their perspective and produce an authentic LinkedIn
@@ -268,11 +268,10 @@ post, return ZERO questions.
 
 When asking a question:
 
-- Ask only the single highest-value question.
+- Ask the {n} highest-value questions.
 - Build directly on what the user has already said.
 - Make it feel like a natural human follow-up.
 - Do not restart the interview.
-- Do not ask multiple questions.
 - Do not ask for information already present.
 - Do not ask generic opinion questions.
 - Do not ask a question simply because a category has not been used yet.
@@ -291,14 +290,14 @@ Do not wrap the JSON in markdown code blocks.
 
 Return the raw JSON object starting with {{ and ending with }}.
 
-When asking a question, return:
+When asking questions, return:
 
 {{
   "questions": [
     {{
       "id": "q1",
       "category": "THE_DISCOVERY",
-      "text": "the single targeted question",
+      "text": "the targeted question",
       "why": "one short line explaining why answering this helps capture the user's perspective",
       "placeholder": "a short example of the kind of answer expected"
     }}

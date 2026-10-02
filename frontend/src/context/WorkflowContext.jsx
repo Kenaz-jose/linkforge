@@ -9,6 +9,7 @@ export const WorkflowProvider = ({ children }) => {
   const [topic, setTopic] = useState('');
   const [tone, setTone] = useState('Direct, punchy, and technical (like a senior engineer)');
   const [questions, setQuestions] = useState([]);
+  const [generatedOptions, setGeneratedOptions] = useState(null);
   const [currentQuestion, setCurrentQuestion] = useState(null);
   const [interviewComplete, setInterviewComplete] = useState(false);
   const [answers, setAnswers] = useState([]);
@@ -24,6 +25,7 @@ export const WorkflowProvider = ({ children }) => {
     setTopic('');
     setTone('Direct, punchy, and technical (like a senior engineer)');
     setQuestions([]);
+    setGeneratedOptions(null);
     setCurrentQuestion(null);
     setInterviewComplete(false);
     setAnswers([]);
@@ -40,6 +42,7 @@ export const WorkflowProvider = ({ children }) => {
     topic, setTopic,
     tone, setTone,
     questions, setQuestions,
+    generatedOptions, setGeneratedOptions,
     currentQuestion, setCurrentQuestion,
     interviewComplete, setInterviewComplete,
     answers, setAnswers,
@@ -58,4 +61,3 @@ export const WorkflowProvider = ({ children }) => {
     </WorkflowContext.Provider>
   );
 };
-
