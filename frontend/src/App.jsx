@@ -7,6 +7,8 @@ import { BriefPage } from './pages/BriefPage';
 import { ReviewPage } from './pages/ReviewPage';
 import { ResultPage } from './pages/ResultPage';
 
+import icon from './assets/icon.png';
+
 function AppContent() {
   const { phase } = useWorkflow();
   const [theme, setTheme] = useState(() => {
@@ -51,7 +53,10 @@ function AppContent() {
     <div className="min-h-screen flex flex-col">
       {/* Global Header */}
       <header className="h-[76px] flex items-center justify-between px-6 md:px-10 max-w-[1320px] w-full mx-auto">
-        <div className="font-editorial text-[28px] md:text-[32px] tracking-tight text-ink">LinkForge</div>
+        <div className="flex items-center gap-3">
+          <img src={icon} alt="LinkForge Logo" className="w-7 h-7 object-contain" />
+          <div className="font-editorial text-[24px] md:text-[28px] tracking-tight text-ink font-semibold">LinkForge</div>
+        </div>
         <button 
           onClick={toggleTheme}
           disabled={isTransitioning}

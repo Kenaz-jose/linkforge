@@ -62,7 +62,7 @@ export const ProbePage = () => {
   return (
     <div className="max-w-3xl mx-auto py-6 md:py-10 w-full">
       <div className="mb-12">
-        <p className="text-metadata text-ink-muted mb-3">Step 3 / Go a Little Deeper</p>
+        
         <h2 className="text-hero text-ink mb-5">There's more<br/>here to explore.</h2>
         <div className="border-b border-border pb-4">
           <p className="text-[13px] text-ink-secondary font-medium tracking-wide uppercase">{topic}</p>

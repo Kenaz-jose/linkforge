@@ -1,162 +1,364 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useWorkflow } from '../context/WorkflowContext';
-import { probeInterview, finishInterview } from '../services/api';
+import { buildBriefFromPOV } from '../services/api';
+
+const POV_SECTIONS = [
+  {
+    key: 'opinion',
+    title: 'What do you think?',
+    description: 'Choose the statements that best describe your point of view, then add your own words if you want.',
+    placeholder: 'Add your own opinion, nuance, disagreement, or explanation...',
+  },
+  {
+    key: 'experience',
+    title: 'What have you experienced?',
+    description: 'These suggestions are based on things you have shared previously. Select what genuinely matches you, then add your own details.',
+    placeholder: 'Add your own experience, project, problem, observation, or specific detail...',
+  },
+  {
+    key: 'message',
+    title: 'What should the reader take away?',
+    description: 'Choose what you want people to think, learn, or do after reading.',
+    placeholder: 'Add the takeaway in your own words...',
+  },
+  {
+    key: 'audience',
+    title: 'Who is this for?',
+    description: 'Choose the people you want this post to speak to, and add anyone specific you have in mind.',
+    placeholder: 'Describe your target audience or a specific group...',
+  },
+];
 
 export const InterviewPage = () => {
-  const { topic, tone, questions, answers, setAnswers, probeQuestions, setProbeQuestions, setBrief, setBriefId, setPhase } = useWorkflow();
-  const [currentAnswers, setCurrentAnswers] = useState(() => {
-    const initial = {};
-    if (answers && answers.length > 0) {
-      answers.forEach(a => {
-        initial[a.question_id] = a;
-      });
-    }
-    return initial;
-  });
+  const {
+    topic,
+    tone,
+    setBrief,
+    setBriefId,
+    setPhase,
+    questions,
+    generatedOptions,
+  } = useWorkflow();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [gapAnalysis, setGapAnalysis] = useState(null);
+  const [followUpAnswer, setFollowUpAnswer] = useState('');
+  
+  const [currentStep, setCurrentStep] = useState(0);
+  const textareaRef = useRef(null);
 
-  const handleTextChange = (id, text, textTitle) => {
-    setCurrentAnswers(prev => ({
+  // Added customVisible to track the toggle state for the textbox
+  const [categoryState, setCategoryState] = useState({
+    opinion: { selected: [], customText: '', customVisible: false },
+    experience: { selected: [], customText: '', customVisible: false },
+    message: { selected: [], customText: '', customVisible: false },
+    audience: { selected: [], customText: '', customVisible: false }
+  });
+
+  const toggleOption = (categoryKey, optionText) => {
+    setCategoryState(prev => {
+      const currentSelected = prev[categoryKey].selected;
+      const newSelected = currentSelected.includes(optionText)
+        ? currentSelected.filter(item => item !== optionText)
+        : [...currentSelected, optionText];
+        
+      return {
+        ...prev,
+        [categoryKey]: { ...prev[categoryKey], selected: newSelected }
+      };
+    });
+    setError(null);
+  };
+
+  const toggleCustomVisible = (categoryKey) => {
+    setCategoryState(prev => ({
       ...prev,
-      [id]: { question_id: id, question_text: textTitle, answer: text }
+      [categoryKey]: { ...prev[categoryKey], customVisible: !prev[categoryKey].customVisible }
     }));
   };
 
-  const getAnswerList = () => {
-    const baseIds = questions.map(q => q.id);
-    const baseAnswers = questions.map(q => {
-      const ans = currentAnswers[q.id];
-      return ans || { question_id: q.id, question_text: q.text, answer: '' };
-    });
-    
-    const probeIds = new Set(probeQuestions ? probeQuestions.map(q => q.id) : []);
-    const extraAnswers = Object.values(currentAnswers).filter(a => probeIds.has(a.question_id));
-    return [...baseAnswers, ...extraAnswers];
-  };
-
-  const handleContinue = async () => {
-    setIsSubmitting(true);
+  const handleTextareaChange = (categoryKey, e) => {
+    setCategoryState(prev => ({
+      ...prev,
+      [categoryKey]: { ...prev[categoryKey], customText: e.target.value }
+    }));
     setError(null);
-    const answerList = getAnswerList();
-    setAnswers(answerList);
     
-    try {
-      const data = await probeInterview(topic, tone, answerList);
-      if (data.questions && data.questions.length > 0) {
-        setProbeQuestions(data.questions);
-        setPhase('probe');
-      } else {
-        await finalizeInterview(answerList, false);
-      }
-    } catch (err) {
-      setError("Failed to submit answers.");
-      setIsSubmitting(false);
+    // Dynamically adjust height
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
     }
   };
 
-  const handleSkip = async () => {
-    setIsSubmitting(true);
-    setError(null);
-    const answerList = getAnswerList();
-    setAnswers(answerList);
-    await finalizeInterview(answerList, false);
+  // Ensure textarea resizes correctly when navigating between steps
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
+    }
+  }, [currentStep, categoryState[POV_SECTIONS[currentStep]?.key]?.customVisible]);
+
+  const getContributionCount = () => {
+    let count = 0;
+    Object.values(categoryState).forEach(state => {
+      count += state.selected.length;
+      if (state.customText.trim().length > 0) count += 1;
+    });
+    return count;
   };
 
-  const finalizeInterview = async (answerList, wasProbed) => {
+  const getCompletedSectionsCount = () => {
+    return Object.values(categoryState).filter(
+      state => state.selected.length > 0 || state.customText.trim().length > 0
+    ).length;
+  };
+
+  const buildPayloadPOV = () => {
+    const finalPov = {};
+    Object.keys(categoryState).forEach(key => {
+      finalPov[key] = {
+        selected: categoryState[key].selected,
+        custom: categoryState[key].customText.trim()
+      };
+    });
+    return finalPov;
+  };
+
+  const handleNextStep = () => {
+    setError(null);
+    if (currentStep < POV_SECTIONS.length - 1) {
+      setCurrentStep(prev => prev + 1);
+    }
+  };
+
+  const handlePrevStep = () => {
+    setError(null);
+    if (currentStep > 0) {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (getContributionCount() === 0) {
+      setError('Please add at least one contribution before generating the brief.');
+      return;
+    }
+
+    setIsSubmitting(true);
+    setError(null);
+    const povPayload = buildPayloadPOV();
+
     try {
-      const data = await finishInterview(topic, tone, answerList, wasProbed);
+      const gapResponse = await fetch('/api/pov/gap', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ topic, pov: povPayload }),
+      });
+
+      if (!gapResponse.ok) throw new Error('Failed to analyze POV');
+
+      const gapData = await gapResponse.json();
+      if (gapData.gap?.has_gap) {
+        setGapAnalysis(gapData.gap);
+        setIsSubmitting(false);
+        return;
+      }
+
+      const data = await buildBriefFromPOV(topic, tone, povPayload);
       setBrief(data.brief);
       setBriefId(data.brief_id);
       setPhase('brief');
     } catch (err) {
-      setError("Failed to create brief.");
+      console.error(err);
+      setError('We could not analyze your perspective right now. Please try again.');
+    } finally {
       setIsSubmitting(false);
     }
   };
 
-  const totalQuestions = questions.length + (probeQuestions ? probeQuestions.length : 0);
-  const validIds = new Set([
-    ...questions.map(q => q.id),
-    ...(probeQuestions ? probeQuestions.map(q => q.id) : [])
-  ]);
-  const filledCount = Object.values(currentAnswers).filter(a => validIds.has(a.question_id) && a.answer.trim() !== '').length;
-  const progressPercent = totalQuestions > 0 ? Math.min((filledCount / totalQuestions) * 100, 100) : 0;
+  const activeSection = POV_SECTIONS[currentStep];
+  const dynamicQuestion = questions?.[currentStep];
+  const sectionOptions = generatedOptions?.[activeSection.key] || [];
+  const currentState = categoryState[activeSection.key];
 
   return (
-    <div className="max-w-3xl mx-auto py-6 md:py-10 w-full">
-      <div className="mb-12">
-        <p className="text-metadata text-ink-muted mb-3">Step 2 / Your Point of View</p>
-        <h2 className="text-hero text-ink mb-5">Let's find<br/>your angle.</h2>
-        <div className="border-b border-border pb-4">
-          <p className="text-[13px] text-ink-secondary font-medium tracking-wide uppercase">{topic}</p>
+    <div className="max-w-4xl mx-auto pt-2 pb-6 md:pt-4 md:pb-10 w-full min-h-[80vh] flex flex-col">      
+      <div className="mb-6 flex-shrink-0">
+        <h2 className="font-editorial text-[32px] md:text-[42px] leading-tight text-ink mb-6">
+          Shape your narrative.
+        </h2>
+        
+        <div className="border-b border-border pb-4 flex flex-col md:flex-row md:justify-between md:items-end gap-4">
+          <p className="text-[14px] md:text-[15px] text-ink-secondary font-sans leading-relaxed pr-4 max-w-3xl">
+            {topic}
+          </p>
+          <p className="text-[12px] text-ink-muted uppercase tracking-wider font-semibold whitespace-nowrap md:mb-1">
+            STEP {currentStep + 1} OF 4
+          </p>
         </div>
       </div>
 
-      <div className="space-y-20 mb-16">
-        {questions.map((q, idx) => (
-          <div key={q.id} className="relative group">
-            <span className="hidden md:block absolute -left-16 top-2 text-metadata text-ink-muted opacity-40">0{idx + 1}</span>
-            <h3 className="font-editorial text-[28px] md:text-[36px] leading-[1.1] tracking-tight text-ink mb-6">{q.text}</h3>
-            
-            <div className="mb-6">
-              <p className="text-metadata text-ink-muted mb-2">Why this matters</p>
-              <p className="text-[15px] text-ink-secondary leading-relaxed max-w-2xl">{q.why}</p>
-            </div>
-            
-            <div className="relative bg-surface rounded-card shadow-quiet border border-border p-5 focus-within:border-ink/30 focus-within:ring-1 focus-within:ring-ink/10 transition-all">
-              <textarea
-                className="w-full h-[180px] font-sans text-[16px] text-ink placeholder:text-ink-muted/60 resize-none focus:outline-none bg-transparent custom-scrollbar"
-                placeholder={q.placeholder}
-                value={currentAnswers[q.id]?.answer || ''}
-                onChange={(e) => handleTextChange(q.id, e.target.value, q.text)}
-              ></textarea>
-            </div>
+      <div className="flex-grow mb-8 animate-fade-in relative">
+        <span className="hidden md:block absolute -left-16 top-2 text-metadata text-ink-muted opacity-40">
+          0{currentStep + 1}
+        </span>
+        
+        <h3 className="font-editorial text-[28px] md:text-[36px] leading-[1.1] tracking-tight text-ink mb-4">
+          {dynamicQuestion ? dynamicQuestion.text : activeSection.title}
+        </h3>
+        
+        {dynamicQuestion?.why ? (
+          <details className="mb-8 group">
+            <summary className="text-[12px] text-ink-muted uppercase tracking-wider font-semibold cursor-pointer list-none flex items-center gap-2 hover:text-ink transition-colors">
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              Why are we asking this?
+            </summary>
+            <p className="text-[14px] text-ink-secondary leading-relaxed max-w-2xl mt-3 pl-6 border-l-2 border-border/50">
+              {dynamicQuestion.why}
+            </p>
+          </details>
+        ) : (
+          <p className="text-[15px] text-ink-secondary leading-relaxed max-w-2xl mb-8">
+            {activeSection.description}
+          </p>
+        )}
+
+        {sectionOptions.length > 0 && (
+          <div className="flex flex-col gap-3 mb-6">
+            {sectionOptions.map((opt, optIdx) => {
+              const isSelected = currentState.selected.includes(opt);
+              return (
+                <button
+                  key={optIdx}
+                  type="button"
+                  onClick={() => toggleOption(activeSection.key, opt)}
+                  disabled={isSubmitting || gapAnalysis?.has_gap}
+                  className={[
+                    'text-left p-4 rounded-control border transition-all text-[14px] leading-relaxed',
+                    isSelected
+                      ? 'bg-selected border-ink text-ink shadow-sm'
+                      : 'border-border bg-surface text-ink-secondary hover:text-ink hover:border-ink/40 hover:bg-surface-muted',
+                    'disabled:opacity-50 flex items-start gap-4'
+                  ].join(' ')}
+                >
+                  <div
+                    className={[
+                      'w-5 h-5 rounded-sm border flex-shrink-0 flex items-center justify-center text-[12px] font-bold transition-colors mt-0.5',
+                      isSelected
+                        ? 'border-ink bg-ink text-surface'
+                        : 'border-ink-muted/40 bg-surface text-transparent'
+                    ].join(' ')}
+                  >
+                    ✓
+                  </div>
+                  <span className="leading-relaxed">{opt}</span>
+                </button>
+              );
+            })}
           </div>
-        ))}
+        )}
+
+        {/* Custom Text Toggle Button */}
+        <div className="mb-4">
+          <button
+            type="button"
+            onClick={() => toggleCustomVisible(activeSection.key)}
+            disabled={isSubmitting || gapAnalysis?.has_gap}
+            className={[
+              'flex items-center gap-3 px-4 py-2.5 rounded-control border transition-all focus:outline-none focus:ring-2 focus:ring-ink/20 w-fit',
+              currentState.customVisible
+                ? 'border-ink bg-ink text-surface shadow-sm'
+                : 'border-border bg-surface text-ink-secondary hover:text-ink hover:border-ink/40 hover:bg-surface-muted',
+              'disabled:opacity-50'
+            ].join(' ')}
+          >
+            <div
+              className={[
+                'w-4 h-4 rounded-sm border flex-shrink-0 flex items-center justify-center text-[11px] font-bold transition-colors',
+                currentState.customVisible
+                  ? 'border-surface bg-surface text-ink'
+                  : 'border-ink-muted/40 bg-surface text-transparent',
+              ].join(' ')}
+            >
+              ✓
+            </div>
+            <span className="text-[14px] font-medium leading-none mt-0.5">
+              Add your own thoughts?
+            </span>
+          </button>
+        </div>
+
+        {/* Dynamic Textarea */}
+        {currentState.customVisible && (
+          <div className="bg-surface rounded-card border border-border p-4 focus-within:border-ink/30 focus-within:ring-2 focus-within:ring-ink/10 transition-all shadow-sm">
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              className="w-full min-h-[28px] font-sans text-[15px] text-ink placeholder:text-ink-muted/60 resize-none focus:outline-none bg-transparent custom-scrollbar leading-relaxed"
+              placeholder={activeSection.placeholder}
+              value={currentState.customText}
+              onChange={(e) => handleTextareaChange(activeSection.key, e)}
+              disabled={isSubmitting || gapAnalysis?.has_gap}
+            />
+          </div>
+        )}
       </div>
 
       {error && (
-        <div className="bg-error/10 text-error p-4 rounded-control mb-8 text-[14px] border border-error/30 font-medium">
+        <div className="bg-error/10 text-error p-4 rounded-control mb-4 text-[14px] border border-error/30 font-medium text-center">
           {error}
         </div>
       )}
 
-      <div className="flex justify-between items-center w-full pb-8">
-            <span className="text-metadata text-ink-muted">{filledCount} OF {totalQuestions} ANSWERED</span>
-            <div className="flex-1 ml-4 bg-surface-muted h-1 rounded-full overflow-hidden">
-              <div className="bg-ink-muted h-full transition-all" style={{ width: `${progressPercent}%` }}></div>
-            </div>
-          </div>
-      <div className="flex flex-col-reverse sm:flex-row gap-4 border-t border-border pt-8">
-        <div className="w-full sm:w-1/3 flex flex-col justify-end">
-          <button
-            onClick={handleSkip}
-            disabled={isSubmitting}
-            className="w-full bg-transparent text-ink-secondary font-sans font-semibold text-[14px] py-3.5 px-6 rounded-button border border-border hover:bg-surface-muted transition-all disabled:opacity-50 flex justify-center items-center"
-          >
-            {isSubmitting ? 'Skipping...' : 'Skip to brief'}
-          </button>
+      {/* Progress & Navigation Footer */}
+      <div className="flex-shrink-0 flex items-center justify-between w-full py-6 mt-4 border-t border-border/40">
+        
+        <div className="flex items-center gap-4 w-1/3">
+           {currentStep > 0 && !gapAnalysis?.has_gap && (
+             <button
+               onClick={handlePrevStep}
+               disabled={isSubmitting}
+               className="text-ink-secondary hover:text-ink text-[13px] font-semibold tracking-wide uppercase transition-colors"
+             >
+               ← Back
+             </button>
+           )}
         </div>
-        <div className="w-full flex flex-col gap-4">
-          <button
-            onClick={handleContinue}
-            disabled={isSubmitting}
-            className="w-full bg-graphite text-surface font-sans font-semibold text-[14px] py-3.5 px-6 rounded-button hover:-translate-y-[1px] hover:shadow-soft transition-all disabled:opacity-50 disabled:hover:transform-none flex justify-center items-center shadow-quiet"
-          >
-            {isSubmitting ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-surface" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Looking for areas worth exploring...
-              </>
-            ) : 'Continue'}
-          </button>
+        
+        <div className="flex-1 px-4 md:px-8 max-w-[200px] flex flex-col items-center">
+          <div className="w-full bg-surface-muted h-1.5 rounded-full overflow-hidden mb-2">
+            <div 
+              className="bg-ink h-full transition-all duration-300 ease-out" 
+              style={{ width: `${(getCompletedSectionsCount() / 4) * 100}%` }} 
+            />
+          </div>
+          <span className="text-[11px] text-ink-muted uppercase tracking-wider font-semibold">
+            {getContributionCount()} {getContributionCount() === 1 ? 'Added' : 'Added'}
+          </span>
+        </div>
+
+        <div className="flex justify-end w-1/3">
+          {currentStep < 3 ? (
+            <button
+              onClick={handleNextStep}
+              disabled={isSubmitting || gapAnalysis?.has_gap}
+              className="bg-surface-muted text-ink border border-border hover:border-ink/40 font-sans font-semibold text-[13px] py-2.5 px-6 rounded-full transition-all flex items-center gap-2"
+            >
+              Next
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={isSubmitting || gapAnalysis?.has_gap}
+              className="bg-ink text-surface font-sans font-semibold text-[13px] py-2.5 px-6 rounded-full hover:shadow-md transition-all disabled:opacity-50 disabled:hover:transform-none flex justify-center items-center shadow-sm"
+            >
+              {isSubmitting && !gapAnalysis?.has_gap ? 'Processing...' : 'Generate Brief'}
+            </button>
+          )}
         </div>
       </div>
     </div>
   );
 };
-

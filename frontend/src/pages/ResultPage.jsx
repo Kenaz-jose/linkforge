@@ -27,8 +27,7 @@ export const ResultPage = () => {
   return (
     <div className="max-w-3xl mx-auto py-10 md:py-16 w-full">
       <div className="mb-10">
-        <p className="text-metadata text-ink-muted mb-3">Done</p>
-        <h2 className="text-hero text-ink mb-5">Your post is ready.</h2>
+        <h2 className="text-hero text-ink mb-5">Your post is ready</h2>
         
         {!passesFaithfulness && (
           <div className="bg-warning/10 border border-warning/30 text-warning/90 px-5 py-4 rounded-control text-[14px] leading-relaxed mb-4 shadow-sm font-medium">

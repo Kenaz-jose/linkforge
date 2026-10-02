@@ -177,7 +177,7 @@ export const ReviewPage = () => {
     return (
       <div className="max-w-3xl mx-auto py-6 md:py-10 w-full">
         <div className="mb-12">
-          <p className="text-metadata text-ink-muted mb-3">Step 5 / Optional Context</p>
+          
           <h2 className="text-hero text-ink mb-5">Review the<br/>sources.</h2>
           <div className="border-b border-border pb-4">
             <p className="text-[12px] text-ink-secondary font-medium tracking-wide uppercase">These references were found to support the post.</p>
@@ -237,8 +237,8 @@ export const ReviewPage = () => {
       <div className="max-w-3xl mx-auto py-6 md:py-10 w-full">
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-10 gap-6">
           <div>
-            <p className="text-metadata text-ink-muted mb-3">Step 6 / Final Review</p>
-            <h2 className="text-hero text-ink mb-1">The Draft.</h2>
+            
+            <h2 className="text-hero text-ink mb-1">The Draft</h2>
           </div>
           <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-[12px] text-ink-muted uppercase tracking-widest font-medium md:border-l border-border md:pl-6 pb-2">
              <div>Craft <span className="text-ink">{verdict.craft_score || 0}/10</span></div>
